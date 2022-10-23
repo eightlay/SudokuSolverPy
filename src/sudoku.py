@@ -2,8 +2,7 @@ from __future__ import annotations
 from copy import deepcopy
 
 from src.settings import (
-    _FIELD_W, _FIELD_H, 
-    _BLOCK_W, _BLOCK_H,
+    _FIELD_SIDE, _BLOCK_SIDE,
     _NUMBER_STR_TEMPLATE_LEN
 )
 from src.point import Point
@@ -12,11 +11,50 @@ from src.square import Square
 
 class Sudoku:
     def __init__(self, set_squares: dict[tuple[int, int], int]) -> None:
-        self.field = {
-            Point(x, y): Square(set_squares.get((x, y)))
-            for x in range(_FIELD_H) for y in range(_FIELD_W) 
-        }
-        self.solved = False
+        self._field: dict[Point, Square]
+        self._points: dict[tuple[int, int], Point]
+        self._connections: dict[Point, set[Point]]
+        self._construct_field(set_squares)
+        self._construct_connections()
+        self._solved = False
+        
+    def _construct_field(
+        self, set_squares: dict[tuple[int, int], int]
+    ) -> None:
+        self._points = {}
+        self._field = {}
+        
+        for x in range(_FIELD_SIDE):
+            for y in range(_FIELD_SIDE):
+                p = Point(x, y)
+                self._points[x, y] = p
+                self._field[p] = Square(set_squares.get((x, y)))
+        
+    def _construct_connections(self) -> None:
+        self._connections = {p: set([]) for p in self._field}
+        
+        def add_conn(p: Point, i: int, j: int) -> None:
+            conn = self._points[i, j]
+            self._connections[p].add(conn)
+            self._connections[conn].add(p)
+        
+        for p in self._field:
+            for k in range(p.y + 1, _FIELD_SIDE):
+                add_conn(p, p.x, k)
+                
+            for k in range(p.x + 1, _FIELD_SIDE):
+                add_conn(p, k, p.y)
+                
+            xoff = p.x // _BLOCK_SIDE * _BLOCK_SIDE
+            yoff = p.y // _BLOCK_SIDE * _BLOCK_SIDE
+            
+            for ib in range(_BLOCK_SIDE):
+                for jb in range(_BLOCK_SIDE):
+                    i = ib + xoff
+                    j = jb + yoff
+                    
+                    if i != p.x and j != p.y:
+                        add_conn(p, i, j)
         
     def solve(self) -> Sudoku:
         f = deepcopy(self)
@@ -24,24 +62,26 @@ class Sudoku:
         return f
     
     def solve_inplace(self) -> None:
-        # TODO
-        self.solved = True
+        if self._solved:
+            return
+        self._solved = True
 
     def __str__(self) -> str:
         result = ""
         row_delim = "-" * int(
-            _FIELD_W * _NUMBER_STR_TEMPLATE_LEN + _FIELD_W / _BLOCK_W + 1
+            _FIELD_SIDE * _NUMBER_STR_TEMPLATE_LEN 
+            + _FIELD_SIDE / _BLOCK_SIDE + 1
         ) + '\n'
         
-        for x in range(_FIELD_H):
-            if x % _BLOCK_H == 0:
+        for x in range(_BLOCK_SIDE):
+            if x % _BLOCK_SIDE == 0:
                 result += row_delim
             
-            for y in range(_FIELD_W):
-                if y % _BLOCK_W == 0:
+            for y in range(_FIELD_SIDE):
+                if y % _BLOCK_SIDE == 0:
                     result += "|"
 
-                result += str(self.field[x, y])
+                result += str(self._field[x, y])
                 
             result += "|\n"
         
