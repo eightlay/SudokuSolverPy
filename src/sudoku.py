@@ -3,7 +3,12 @@ from copy import deepcopy
 
 from src.settings import (
     _FIELD_SIDE, _BLOCK_SIDE,
-    _NUMBER_STR_TEMPLATE_LEN
+    _NUMBER_STR_TEMPLATE_LEN,
+    _NUMBER_RANGE
+)
+from src.house import (
+    ROW, COL, BLOCK,
+    create_stats
 )
 from src.point import Point
 from src.square import Square
@@ -17,6 +22,7 @@ class Sudoku:
         
         self._construct_field(set_squares)
         
+        self._to_solve = _FIELD_SIDE ** 2
         self._solved = False
         
     def _construct_field(
@@ -43,6 +49,11 @@ class Sudoku:
         self._construct_connections()
         self._initial_domain_cut()
         
+        limit = 0
+        
+        while self._to_solve and limit < 10:
+            limit += 1
+            self._hidden_single()
         
         self._solved = True
         
@@ -75,6 +86,7 @@ class Sudoku:
     def _initial_domain_cut(self) -> None:
         for p in self._field:
             if self._field[p].assigned:
+                self._to_solve -= 1
                 self._collapse(p)
             
     def _collapse(self, p: Point) -> None:
@@ -86,6 +98,7 @@ class Sudoku:
             flag &= self._field[conn].reduce_domain(n)
             
             if flag:
+                self._to_solve -= 1
                 to_collapse_next.append(conn)
         
         self._remove_connection(p)
@@ -96,6 +109,37 @@ class Sudoku:
     def _remove_connection(self, conn: Point) -> None:
         for p in self._connections:
             self._connections[p].discard(conn)
+    
+    def _hidden_single(self) -> None:
+        rng = range(_FIELD_SIDE)
+        
+        for n in _NUMBER_RANGE:
+            for k in rng:
+                stats = create_stats()
+                
+                xstart = k // _BLOCK_SIDE * _BLOCK_SIDE
+                ystart = k % _BLOCK_SIDE * _BLOCK_SIDE
+                
+                for l in rng:
+                    if self._field[k, l].in_domain(n):
+                        stats[ROW].count += 1
+                        stats[ROW].point = k, l
+                        
+                    if self._field[l, k].in_domain(n):
+                        stats[COL].count += 1
+                        stats[COL].point = l, k
+                        
+                    x = xstart + l // _BLOCK_SIDE
+                    y = ystart + l % _BLOCK_SIDE
+                        
+                    if self._field[x, y].in_domain(n):
+                        stats[BLOCK].count += 1
+                        stats[BLOCK].point = x, y
+                        
+                for stat in stats.values():
+                    if stat.count == 1:
+                        self._field[stat.point].set_number(n)
+                        self._collapse(stat.point)
 
     def __str__(self) -> str:
         result = ""

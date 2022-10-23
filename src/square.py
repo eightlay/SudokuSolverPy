@@ -7,7 +7,7 @@ class Square:
             raise ValueError(f"can't assign Square to number {set_number}")
         
         self._number = set_number
-        self.domain = set([] if set_number else _NUMBER_RANGE)
+        self._domain = set([] if set_number else _NUMBER_RANGE)
         
     @property
     def number(self) -> int | None:
@@ -18,8 +18,8 @@ class Square:
         return self.number is not None
     
     def set_number(self, n: int) -> bool:
-        if n in self.domain:
-            self.domain.clear()
+        if n in self._domain:
+            self._domain.clear()
             self._number = n
             return True
         return False
@@ -28,12 +28,15 @@ class Square:
         if self.assigned:
             return True
         
-        self.domain.discard(n)
+        self._domain.discard(n)
         
-        if len(self.domain) == 1:
-            self._number = self.domain.pop()
+        if len(self._domain) == 1:
+            self._number = self._domain.pop()
 
         return self.assigned
+    
+    def in_domain(self, n: int) -> bool:
+        return n in self._domain
         
     def __str__(self) -> str:
         return (
