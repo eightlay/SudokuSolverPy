@@ -14,8 +14,9 @@ class Sudoku:
         self._field: dict[Point, Square]
         self._points: dict[tuple[int, int], Point]
         self._connections: dict[Point, set[Point]]
+        
         self._construct_field(set_squares)
-        self._construct_connections()
+        
         self._solved = False
         
     def _construct_field(
@@ -29,6 +30,21 @@ class Sudoku:
                 p = Point(x, y)
                 self._points[x, y] = p
                 self._field[p] = Square(set_squares.get((x, y)))
+        
+    def solve(self) -> Sudoku:
+        f = deepcopy(self)
+        f.solve_inplace()
+        return f
+    
+    def solve_inplace(self) -> None:
+        if self._solved:
+            return
+        
+        self._construct_connections()
+        self._initial_domain_cut()
+        
+        
+        self._solved = True
         
     def _construct_connections(self) -> None:
         self._connections = {p: set([]) for p in self._field}
@@ -55,16 +71,31 @@ class Sudoku:
                     
                     if i != p.x and j != p.y:
                         add_conn(p, i, j)
+                        
+    def _initial_domain_cut(self) -> None:
+        for p in self._field:
+            if self._field[p].assigned:
+                self._collapse(p)
+            
+    def _collapse(self, p: Point) -> None:
+        n = self._field[p].number
+        to_collapse_next = []
         
-    def solve(self) -> Sudoku:
-        f = deepcopy(self)
-        f.solve_inplace()
-        return f
-    
-    def solve_inplace(self) -> None:
-        if self._solved:
-            return
-        self._solved = True
+        for conn in self._connections[p]:
+            flag = not self._field[conn].assigned
+            flag &= self._field[conn].reduce_domain(n)
+            
+            if flag:
+                to_collapse_next.append(conn)
+        
+        self._remove_connection(p)
+        
+        for conn in to_collapse_next:
+            self._collapse(conn)
+        
+    def _remove_connection(self, conn: Point) -> None:
+        for p in self._connections:
+            self._connections[p].discard(conn)
 
     def __str__(self) -> str:
         result = ""
@@ -73,7 +104,7 @@ class Sudoku:
             + _FIELD_SIDE / _BLOCK_SIDE + 1
         ) + '\n'
         
-        for x in range(_BLOCK_SIDE):
+        for x in range(_FIELD_SIDE):
             if x % _BLOCK_SIDE == 0:
                 result += row_delim
             
