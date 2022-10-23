@@ -1,8 +1,7 @@
 from src.sudoku import Sudoku
 
-
-def main() -> None:
-    unsolved = Sudoku({
+EXAMPLES = [
+    {
         (0, 0): 2, (0, 2): 5, (0, 3): 3, (0, 5): 8, (0, 6): 4, (0, 8): 9,
         (1, 1): 7, (1, 7): 5,
         (2, 0): 9, (2, 2): 4, (2, 6): 6, (2, 8): 7,
@@ -12,12 +11,30 @@ def main() -> None:
         (6, 0): 4, (6, 2): 6, (6, 6): 8, (6, 8): 1,
         (7, 1): 2, (7, 7): 6,
         (8, 0): 8, (8, 2): 1, (8, 3): 2, (8, 5): 9, (8, 6): 7, (8, 8): 4,  
-    })
-    print('Unsolved:\n', unsolved)
-    
-    solved = unsolved.solve()
-    print('Solved:\n', solved)
+    },
+    {
+        (0, 3): 3, (0, 6): 5,
+        (1, 1): 5, (1, 2): 1, (1, 4): 9, (1, 8): 7,
+        (2, 1): 4, (2, 3): 7,
+        (3, 3): 8, (3, 7): 1,
+        (4, 0): 4, (4, 3): 9, (4, 5): 6, (4, 8): 5,
+        (5, 1): 7, (5, 5): 2,
+        (6, 5): 7, (6, 7): 8,
+        (7, 0): 2, (7, 4): 5, (7, 6): 6, (7, 7): 3,
+        (8, 2): 6, (8, 5): 8
+        
+    }
+]
 
+def main() -> None:
+    for i, e in enumerate(EXAMPLES):
+        print(f"Example #{i + 1}:\n")
+        
+        unsolved = Sudoku(e)
+        print('Unsolved:\n', unsolved)
+        
+        solved = unsolved.solve()
+        print('Solved:\n', solved)
 
 if __name__ == "__main__":
     main()
