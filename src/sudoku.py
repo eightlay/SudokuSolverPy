@@ -1,17 +1,19 @@
 from __future__ import annotations
 from copy import deepcopy
+from typing import Iterable
+from collections import Counter
 
+from src.point import Point
+from src.square import Square
+from src.house import (
+    ROW, COL, BLOCK,
+    create_trackers
+)
 from src.settings import (
     _FIELD_SIDE, _BLOCK_SIDE,
     _NUMBER_STR_TEMPLATE_LEN,
     _NUMBER_RANGE
 )
-from src.house import (
-    ROW, COL, BLOCK,
-    create_stats
-)
-from src.point import Point
-from src.square import Square
 
 
 class Sudoku:
@@ -54,6 +56,9 @@ class Sudoku:
         while self._to_solve and limit < 10:
             limit += 1
             self._hidden_single()
+            # print(self)
+            self._pairs()
+            # print(self)
         
         self._solved = True
         
@@ -89,15 +94,15 @@ class Sudoku:
                 self._to_solve -= 1
                 self._collapse(p)
             
-    def _collapse(self, p: Point) -> None:
+    def _collapse(self, p: Point, exclude: Iterable[Point] = ()) -> None:
         n = self._field[p].number
         to_collapse_next = []
         
         for conn in self._connections[p]:
-            flag = not self._field[conn].assigned
-            flag &= self._field[conn].reduce_domain(n)
+            if conn in exclude:
+                continue
             
-            if flag:
+            if self._field[conn].reduce_domain(n):
                 self._to_solve -= 1
                 to_collapse_next.append(conn)
         
@@ -115,31 +120,71 @@ class Sudoku:
         
         for n in _NUMBER_RANGE:
             for k in rng:
-                stats = create_stats()
+                stats = create_trackers()
                 
                 xstart = k // _BLOCK_SIDE * _BLOCK_SIDE
                 ystart = k % _BLOCK_SIDE * _BLOCK_SIDE
                 
                 for l in rng:
                     if self._field[k, l].in_domain(n):
-                        stats[ROW].count += 1
-                        stats[ROW].point = k, l
+                        stats[ROW].append((k, l))
                         
                     if self._field[l, k].in_domain(n):
-                        stats[COL].count += 1
-                        stats[COL].point = l, k
+                        stats[COL].append((l, k))
                         
                     x = xstart + l // _BLOCK_SIDE
                     y = ystart + l % _BLOCK_SIDE
                         
                     if self._field[x, y].in_domain(n):
-                        stats[BLOCK].count += 1
-                        stats[BLOCK].point = x, y
+                        stats[BLOCK].append((x, y))
                         
                 for stat in stats.values():
-                    if stat.count == 1:
-                        self._field[stat.point].set_number(n)
-                        self._collapse(stat.point)
+                    if len(stat) == 1:
+                        p = stat[0]
+                        self._field[p].set_number(n)
+                        self._collapse(p)
+
+    def _pairs(self) -> None:
+        rng = range(_FIELD_SIDE)
+
+        for k in rng:
+            trackers = create_trackers()
+            stats = create_trackers()
+            
+            xstart = k // _BLOCK_SIDE * _BLOCK_SIDE
+            ystart = k % _BLOCK_SIDE * _BLOCK_SIDE
+
+            for l in rng:
+                x = xstart + l // _BLOCK_SIDE
+                y = ystart + l % _BLOCK_SIDE
+
+                trackers[ROW].append((k, l))
+                trackers[COL].append((l, k))
+                trackers[BLOCK].append((x, y))
+                stats[ROW].append(tuple(sorted(self._field[k, l].domain)))
+                stats[COL].append(tuple(sorted(self._field[l, k].domain)))
+                stats[BLOCK].append(tuple(sorted(self._field[x, y].domain)))
+
+            for house, doms in stats.items():
+                # Hidden pair
+                counter = Counter(doms)
+                del counter[()]
+
+                for dom, count in counter.items():
+                    if not (count == len(dom) == 2):
+                        continue
+                    
+                    for i, p in enumerate(trackers[house]):
+                        if doms[i] == dom:
+                            continue
+
+                        for n in dom:
+                            if self._field[p].reduce_domain(n):
+                                self._to_solve -= 1
+                                self._remove_connection(p)
+                                    
+                # Pointing pair
+                # TODO  
 
     def __str__(self) -> str:
         result = ""

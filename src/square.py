@@ -17,6 +17,10 @@ class Square:
     def assigned(self) -> bool:
         return self.number is not None
     
+    @property
+    def domain(self) -> set[int]:
+        return self._domain.copy()
+    
     def set_number(self, n: int) -> bool:
         if n in self._domain:
             self._domain.clear()
@@ -26,7 +30,7 @@ class Square:
         
     def reduce_domain(self, n: int) -> bool:
         if self.assigned:
-            return True
+            return False
         
         self._domain.discard(n)
         
