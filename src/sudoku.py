@@ -17,7 +17,14 @@ from src.settings import (
 
 
 class Sudoku:
-    def __init__(self, set_squares: dict[tuple[int, int], int]) -> None:
+    def __init__(self, set_squares: dict[tuple[int, int], int] = {}) -> None:
+        """Create sudoku with the given set squares
+
+        Args:
+            set_squares (dict[tuple[int, int], int], optional): set squares.
+            Key is point where to place number, value is number. 
+            Defaults to {}.
+        """
         self._field: dict[Point, Square]
         self._points: dict[tuple[int, int], Point]
         self._connections: dict[Point, set[Point]]
@@ -30,6 +37,12 @@ class Sudoku:
     def _construct_field(
         self, set_squares: dict[tuple[int, int], int]
     ) -> None:
+        """Construct field and points dictionary
+
+        Args:
+            set_squares (dict[tuple[int, int], int]): set squares.
+            Key is point where to place number, value is number.
+        """
         self._points = {}
         self._field = {}
         
@@ -40,11 +53,18 @@ class Sudoku:
                 self._field[p] = Square(set_squares.get((x, y)))
         
     def solve(self) -> Sudoku:
+        """Solve sudoku
+
+        Returns:
+            Sudoku: solved sudoku
+        """
         f = deepcopy(self)
         f.solve_inplace()
         return f
     
     def solve_inplace(self) -> None:
+        """Solve sudoku without creating new object
+        """
         if self._solved:
             return
         
@@ -63,6 +83,8 @@ class Sudoku:
         self._solved = True
         
     def _construct_connections(self) -> None:
+        """Construct squares connections
+        """
         self._connections = {p: set([]) for p in self._field}
         
         def add_conn(p: Point, i: int, j: int) -> None:
@@ -89,12 +111,21 @@ class Sudoku:
                         add_conn(p, i, j)
                         
     def _initial_domain_cut(self) -> None:
+        """Cut domains from the initially got set squares
+        """
         for p in self._field:
             if self._field[p].assigned:
                 self._to_solve -= 1
                 self._collapse(p)
             
     def _collapse(self, p: Point, exclude: Iterable[Point] = ()) -> None:
+        """Collapse square connections graph
+
+        Args:
+            p (Point): point to collapse around
+            exclude (Iterable[Point], optional): points to exclude from collapse.
+            Defaults to ().
+        """
         n = self._field[p].number
         to_collapse_next = []
         
@@ -112,10 +143,17 @@ class Sudoku:
             self._collapse(conn)
         
     def _remove_connection(self, conn: Point) -> None:
+        """Remove point from all connections
+
+        Args:
+            conn (Point): point to remove
+        """
         for p in self._connections:
             self._connections[p].discard(conn)
     
     def _hidden_single(self) -> None:
+        """Hidden single sudoku technique
+        """
         rng = range(_FIELD_SIDE)
         
         for n in _NUMBER_RANGE:
@@ -145,6 +183,8 @@ class Sudoku:
                         self._collapse(p)
 
     def _pairs(self) -> None:
+        """Hidden pair and pointing pair sudoku technique
+        """
         rng = range(_FIELD_SIDE)
 
         for k in rng:
